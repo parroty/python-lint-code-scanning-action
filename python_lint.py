@@ -15,6 +15,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from subprocess import run
 import json
+from typing import Union
 
 
 LOG = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ def flake8_linter(target: Path, output_filename: str) -> None:
     return None
 
 
-def ruff_format_sarif(results: list[dict[str, str|int]]) -> dict:
+def ruff_format_sarif(results: list[dict[str, Union[str,int]]]) -> dict:
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
@@ -116,7 +117,7 @@ def ruff_linter(target: Path) -> dict:
     return sarif
 
 
-def pylint_format_sarif(results: list[dict[str, str|int]], target: Path) -> dict:
+def pylint_format_sarif(results: list[dict[str, Union[str,int]]], target: Path) -> dict:
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
