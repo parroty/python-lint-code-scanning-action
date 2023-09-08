@@ -231,7 +231,7 @@ def main() -> None:
 
     if sarif is not None:
         # output the results to a file, for later upload
-        with open(args.ouput, "w") as sf:
+        with open(args.output, "w") as sf:
             json.dump(sarif, sf, indent=2)
 
 
