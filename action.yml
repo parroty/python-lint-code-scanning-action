@@ -1,0 +1,40 @@
+name: Python Lint Code Scanning Action
+description: Runs a python linter of your choice, outputting SARIF
+inputs:
+  linter:
+    description: 'The linter to use'
+    required: true
+    default: 'flake8'
+    choices: ['flake8', 'pylint', 'ruff']
+  target:
+    description: 'The target to lint'
+    required: true
+    default: '.'
+  output:
+    description: 'The output file'
+    required: false
+    default: 'python_linter.sarif'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+    - name: Set up Python Lint
+      run: |
+        if [ "${OSTYPE}" == "msys" ]; then
+          PYTHON_CMD=python
+        else
+          PYTHON_CMD=python3
+        fi
+      env:
+        PYTHON_CMD: ${{ env.PYTHON_CMD }}
+        INPUTS_LINTER: ${{ inputs.linter }}
+        INPUTS_TARGET: ${{ inputs.target }}
+        INPUTS_OUTPUT: ${{ inputs.output }}
+    - name: Run Python Lint
+      run: |
+        "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"

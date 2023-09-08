@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flake8_sarif_formatter"
+version = "0.0.1"
+description = "A SARIF formatter for flake8"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Framework :: Flake8",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/advanced-security/flake8-sarif-formatter"
+"Bug Tracker" = "ttps://github.com/advanced-security/flake8-sarif-formatter/issues"
+
+[project.entry-points."flake8.report"]
+sarif = "flake8_sarif_formatter:SarifFormatter"

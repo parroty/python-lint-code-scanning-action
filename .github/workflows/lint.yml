@@ -1,0 +1,13 @@
+name: Python Lint Workflow
+on:
+  workflow_dispatch:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Run Python Lint
+        uses: aegilops/python-lint-code-scanning-action@v1
+        with:
+          linter: ruff
