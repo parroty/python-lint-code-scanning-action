@@ -30,6 +30,7 @@ runs:
         else
           PYTHON_CMD=python3
         fi
+        "${PYTHON_CMD}" -mpip install ruff flake8 pylint
         "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"
       env:
         INPUTS_LINTER: ${{ inputs.linter }}
