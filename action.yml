@@ -23,20 +23,16 @@ runs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.9'
-    - name: Set up Python Lint
+    - name: Run Python Lint
       run: |
         if [ "${OSTYPE}" == "msys" ]; then
           PYTHON_CMD=python
         else
           PYTHON_CMD=python3
         fi
+        "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"
       env:
-        PYTHON_CMD: ${{ env.PYTHON_CMD }}
         INPUTS_LINTER: ${{ inputs.linter }}
         INPUTS_TARGET: ${{ inputs.target }}
         INPUTS_OUTPUT: ${{ inputs.output }}
-      shell: bash
-    - name: Run Python Lint
-      run: |
-        "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"
       shell: bash
