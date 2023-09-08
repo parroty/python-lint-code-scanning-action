@@ -90,7 +90,7 @@ def ruff_format_sarif(results: list[dict[str, Union[str,int]]]) -> dict:
     return sarif
 
 
-def ruff_linter(target: Path) -> dict:
+def ruff_linter(target: Path, *args) -> dict:
     """Run the ruff linter."""
     LOG.debug("Running ruff")
 
@@ -179,7 +179,7 @@ def pylint_format_sarif(results: list[dict[str, Union[str,int]]], target: Path) 
     return sarif
 
 
-def pylint_linter(target: Path) -> dict:
+def pylint_linter(target: Path, *args) -> dict:
     """Run the pylint linter."""
     LOG.debug("Running pylint")
 
