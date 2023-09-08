@@ -35,6 +35,8 @@ runs:
         INPUTS_LINTER: ${{ inputs.linter }}
         INPUTS_TARGET: ${{ inputs.target }}
         INPUTS_OUTPUT: ${{ inputs.output }}
+      shell: bash
     - name: Run Python Lint
       run: |
         "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"
+      shell: bash
