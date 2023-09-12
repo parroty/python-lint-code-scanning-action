@@ -196,9 +196,71 @@ def pylint_linter(target: Path, *args) -> dict:
     return sarif_run
 
 
-def mypy_format_sarif(results: str) -> dict:
+def mypy_format_sarif(junit_xml_file: str) -> dict:
     """Convert JUnit XML output into SARIF."""
-    return {}
+    sarif_run = {
+        "tool": {
+            "driver": {
+                "name": "MyPy",
+                "rules": [],
+            }
+        },
+        "results": [
+        ],
+    }
+
+    # read in XML from filename
+    with open(junit_xml_file) as xf:
+        xml_data = xf.read()
+
+        # convert to JSON
+        from junitparser import TestCase, TestSuite, JUnitXml
+        junit_xml = JUnitXml.fromstring(xml_data)
+
+        for suite in junit_xml:
+            for case in suite:
+                LOG.debug(dir(case))
+                LOG.debug(case)
+
+                continue
+
+                sarif_result = {
+                    "ruleId": case.type,
+                    "level": "note",
+                    "message": {
+                        "text": case.message,
+                    },
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": case.classname,
+                                },
+                                "region": {
+                                    "startLine": case.line,
+                                    "startColumn": case.column,
+                                    "endLine": case.line,
+                                    "endColumn": case.column,
+                                }
+                            }
+                        }
+                    ]
+                }
+
+                sarif_run["results"].append(sarif_result)
+
+                # append the rule if we haven't already recorded it in the rules array
+                rules = sarif_run["tool"]["driver"]["rules"]
+                if case.name not in [rule["id"] for rule in rules]:
+                    sarif_rule = {
+                        "id": case.name,
+                        "shortDescription": {
+                            "text": case.name,
+                        },
+                    }
+                    rules.append(sarif_rule)
+
+    return sarif_run
 
 
 def mypy_linter(target: Path, output_filename: str) -> dict:
