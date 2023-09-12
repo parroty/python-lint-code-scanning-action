@@ -32,7 +32,7 @@ runs:
         fi
         "${PYTHON_CMD}" -mpip install ruff flake8 pylint
         "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
-        "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"
+        "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${GITHUB_WORKSPACE}/${INPUTS_OUTPUT}"
       env:
         INPUTS_LINTER: ${{ inputs.linter }}
         INPUTS_TARGET: ${{ inputs.target }}
