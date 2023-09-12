@@ -9,7 +9,7 @@ inputs:
   target:
     description: 'The target to lint'
     required: true
-    default: '.'
+    default: ${{ github.workspace }}
   output:
     description: 'The output file'
     required: false
