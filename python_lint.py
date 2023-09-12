@@ -208,10 +208,10 @@ LINTERS = {"pylint": pylint_linter, "ruff": ruff_linter, "flake8": flake8_linter
 
 def add_args(parser: ArgumentParser) -> None:
     """Add arguments to the parser."""
-    parser.add_argument("linter", choices=LINTERS.keys(), help="The linter to use")
-    parser.add_argument("target", default=".", help="Target path for the linter")
-    parser.add_argument("output", default="python_linter.sarif", help="Output filename")
-    parser.add_argument("--debug", "-d", action="store_true", help="Enable debug logging")
+    parser.add_argument("linters", choices=LINTERS.keys(), nargs="+", help="The linter(s) to use")
+    parser.add_argument("--target", "-t", default=".", required=False, help="Target path for the linter")
+    parser.add_argument("--output", "-o", default="python_linter.sarif", required=False, help="Output filename")
+    parser.add_argument("--debug", "-d", action="store_true", required=False, help="Enable debug logging")
 
 
 def main() -> None:

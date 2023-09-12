@@ -37,4 +37,4 @@ runs:
         INPUTS_OUTPUT: ${{ inputs.output }}
     - name: Run Python Lint
       run: |
-        "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" "${INPUTS_TARGET}" "${INPUTS_OUTPUT}"
+        "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${INPUTS_OUTPUT}"
