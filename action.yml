@@ -9,7 +9,7 @@ inputs:
   target:
     description: 'The target to lint'
     required: true
-    default: '.'
+    default: ${{ github.workspace }}
   output:
     description: 'The output file'
     required: false
@@ -18,23 +18,27 @@ runs:
   using: 'composite'
   steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.9'
-    - name: Set up Python Lint
+    - name: Run Python Lint
       run: |
         if [ "${OSTYPE}" == "msys" ]; then
           PYTHON_CMD=python
         else
           PYTHON_CMD=python3
         fi
+        "${PYTHON_CMD}" -mpip install ruff flake8 pylint
+        "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
+        "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${GITHUB_WORKSPACE}/${INPUTS_OUTPUT}"
       env:
-        PYTHON_CMD: ${{ env.PYTHON_CMD }}
         INPUTS_LINTER: ${{ inputs.linter }}
         INPUTS_TARGET: ${{ inputs.target }}
         INPUTS_OUTPUT: ${{ inputs.output }}
-    - name: Run Python Lint
-      run: |
-        "${PYTHON_CMD}" python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${INPUTS_OUTPUT}"
+      shell: bash
+    - name: Upload SARIF
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ inputs.output }}

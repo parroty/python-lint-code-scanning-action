@@ -1,5 +1,7 @@
 # Python Linting Action
 
+> ⚠️ this is work in progress ⚠️
+
 ## Usage
 
 ### Command line
