@@ -407,9 +407,74 @@ def pyright_linter(target: Path, output_filename: str) -> dict:
     return sarif_run
 
 
-def pytype_linter(target: Path) -> dict:
+def pytype_format_sarif(results: str) -> dict:
+    """Convert PyType output into SARIF."""
+
+    sarif_run = {
+        "tool": {
+            "driver": {
+                "name": "Pytype",
+                "rules": [],
+            }
+        },
+        "results": [
+        ],
+    }
+
+    pytype_re = re.compile(r'File "(?P<filename>[^"]+)", line (?P<line>\d+), in (?P<scope>\S+): (?P<message>.*) \[(?P<rule>[a-z-]+)\]')
+
+    for line in results.split("\n"):
+        if match := pytype_re.search(line):
+            filename = match.group("filename")
+            line_number = int(match.group("line"))
+            scope = match.group("scope")
+            message = match.group("message")
+            rule = match.group("rule")
+
+            rule_id = f"pytype/{rule}"
+
+            sarif_result = {
+                "ruleId": rule_id,
+                "level": "note",
+                "message": {
+                    "text": message,
+                },
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {
+                                "uri": Path(filename).resolve().absolute().as_uri(),
+                            },
+                            "region": {
+                                "startLine": line_number,
+                                "startColumn": 1,
+                                "endLine": line_number,
+                                "endColumn": 1,
+                            }
+                        }
+                    }
+                ],
+            }
+
+            sarif_run["results"].append(sarif_result)
+
+            # append the rule if we haven't already recorded it in the rules array
+            rules = sarif_run["tool"]["driver"]["rules"]
+            if rule_id not in [rule["id"] for rule in rules]:
+                sarif_rule = {
+                    "id": rule_id,
+                    "shortDescription": {
+                        "text": rule_id,
+                    },
+                }
+                rules.append(sarif_rule)
+
+    return sarif_run
+
+
+def pytype_linter(target: Path, *args) -> dict:
     """Run the pytype linter."""
-    process = run(["pytype", "--exclude", ".pytype", "--", target.absolute().as_posix()], capture_output=True)
+    process = run(["pytype", "--exclude", ".pytype/", "--", target.absolute().as_posix()], capture_output=True)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -422,13 +487,15 @@ def pytype_linter(target: Path) -> dict:
     # process STDOUT
     results = process.stdout.decode("utf-8")
 
-    LOG.debug(results)
+    sarif_run = pytype_format_sarif(results)
+
+    return sarif_run
 
 
 LINTERS = {"pylint": pylint_linter, "ruff": ruff_linter, "flake8": flake8_linter, "mypy": mypy_linter, "pyright": pyright_linter}
 
 # pytype is only supported on Python 3.10 and below, at the time of writing
-if sys.version <= "3.10":
+if sys.version_info[0] == 3 and sys.version_info[1] <= 10:
     LINTERS["pytype"] = pytype_linter
 
 
