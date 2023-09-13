@@ -14,3 +14,23 @@ unused_variable = 1
 # a variable that is used before it is defined
 print(used_before_defined)
 
+foo("hello")
+bar("hello")
+baz("hello")
+
+
+def foo(hello: str) -> None:
+    """A function that doesn't use its argument."""
+    return
+
+
+def bar(hello: str) -> None:
+    """A function that returns the wrong type."""
+    print(hello)
+    return hello
+
+
+def baz(hello: int) -> None:
+    """A function that will be called with the wrong type annotation."""
+    print(hello)
+    return None
