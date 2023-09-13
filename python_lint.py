@@ -16,6 +16,7 @@ from pathlib import Path
 from subprocess import run
 import json
 from typing import Union
+import re
 
 
 LOG = logging.getLogger(__name__)
@@ -196,8 +197,8 @@ def pylint_linter(target: Path, *args) -> dict:
     return sarif_run
 
 
-def mypy_format_sarif(junit_xml_file: str) -> dict:
-    """Convert JUnit XML output into SARIF."""
+def mypy_format_sarif(mypy_results: str) -> dict:
+    """Convert MyPy output into SARIF."""
     sarif_run = {
         "tool": {
             "driver": {
@@ -209,56 +210,58 @@ def mypy_format_sarif(junit_xml_file: str) -> dict:
         ],
     }
 
-    # read in XML from filename
-    with open(junit_xml_file) as xf:
-        xml_data = xf.read()
+    # regex to remove specifics from messages to auto-generate rule IDs
+    remove_quotations = re.compile(r'"[^"]*"')
+    remove_numbers = re.compile(r"\d+")
 
-        # convert to JSON
-        from junitparser import TestCase, TestSuite, JUnitXml
-        junit_xml = JUnitXml.fromstring(xml_data)
+    for result in mypy_results.split("\n"):
+        if not result:
+            continue
 
-        for suite in junit_xml:
-            for case in suite:
-                LOG.debug(dir(case))
-                LOG.debug(case)
+        # NOTE: assumes no filename contains " :", may need to be addressed if that causes issues
+        location, message = result.split(": ", 1)
 
-                continue
+        filename, line, column, _ = location.split(":") + [1, None]
 
-                sarif_result = {
-                    "ruleId": case.type,
-                    "level": "note",
-                    "message": {
-                        "text": case.message,
-                    },
-                    "locations": [
-                        {
-                            "physicalLocation": {
-                                "artifactLocation": {
-                                    "uri": case.classname,
-                                },
-                                "region": {
-                                    "startLine": case.line,
-                                    "startColumn": case.column,
-                                    "endLine": case.line,
-                                    "endColumn": case.column,
-                                }
-                            }
-                        }
-                    ]
-                }
+        rule_id = message.split(": ")[1]
+        rule_id = remove_quotations.sub('"..."', rule_id)
+        rule_id = remove_numbers.sub("N", rule_id)
 
-                sarif_run["results"].append(sarif_result)
-
-                # append the rule if we haven't already recorded it in the rules array
-                rules = sarif_run["tool"]["driver"]["rules"]
-                if case.name not in [rule["id"] for rule in rules]:
-                    sarif_rule = {
-                        "id": case.name,
-                        "shortDescription": {
-                            "text": case.name,
+        sarif_result = {
+            "ruleId": rule_id,
+            "level": "note",
+            "message": {
+                "text": message,
+            },
+            "locations": [
+                {
+                    "physicalLocation": {
+                        "artifactLocation": {
+                            "uri": filename,
                         },
+                        "region": {
+                            "startLine": int(line),
+                            "startColumn": int(column),
+                            "endLine": int(line),
+                            "endColumn": int(column),
+                        }
                     }
-                    rules.append(sarif_rule)
+                }
+            ]
+        }
+
+        sarif_run["results"].append(sarif_result)
+
+        # append the rule if we haven't already recorded it in the rules array
+        rules = sarif_run["tool"]["driver"]["rules"]
+        if rule_id not in [rule["id"] for rule in rules]:
+            sarif_rule = {
+                "id": rule_id,
+                "shortDescription": {
+                    "text": rule_id,
+                },
+            }
+            rules.append(sarif_rule)
 
     return sarif_run
 
@@ -270,7 +273,9 @@ def mypy_linter(target: Path, output_filename: str) -> dict:
 
     mypy_junit_xml = Path(output_filename).with_suffix(".xml")
 
-    process = run(["mypy", "--ignore-missing-imports", "--junit-xml", mypy_junit_xml.as_posix(), target.absolute().as_posix()], capture_output=True)
+    mypy_args = ["--ignore-missing-imports", "--no-error-summary", "--no-pretty"]
+
+    process = run(["mypy", *mypy_args, target.absolute().as_posix()], capture_output=True)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -280,9 +285,7 @@ def mypy_linter(target: Path, output_filename: str) -> dict:
         LOG.error("No output from mypy")
         return None
 
-    LOG.debug(open(mypy_junit_xml).read())
-
-    sarif_run = mypy_format_sarif(mypy_junit_xml)
+    sarif_run = mypy_format_sarif(process.stdout.decode("utf-8"))
 
     return sarif_run
 
