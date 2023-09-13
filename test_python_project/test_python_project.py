@@ -51,6 +51,9 @@ def main() -> None:
     bar("hello")
     baz("hello")
 
+    if True:
+        print("This is true")
+
 
 if __name__ == "__main__":
     main()

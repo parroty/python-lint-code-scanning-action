@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-Lint Python files using your choice of linter.
+Lint Python files using your choice of linter or type checker.
 
 Get output in SARIF, for upload to GitHub Code Scanning.
 
@@ -16,21 +16,44 @@ from argparse import ArgumentParser
 from pathlib import Path
 from subprocess import run
 import json
-from typing import Union
+from typing import Union, Optional
 import re
 
 
 LOG = logging.getLogger(__name__)
 
+# pytype is only supported on Python 3.10 and below, at the time of writing
+# the rest of the script is Python 3.7+
+if sys.version_info[0] == 2 or (sys.version_info[0] == 3 and sys.version_info[1] < 7):
+    logging.basicConfig(level=logging.INFO)
+    LOG.error("This script requires Python 3.7 or above")
+    sys.exit(1)
 
-def flake8_linter(target: Path, output_filename: str) -> None:
+
+def make_sarif_run(tool_name: str) -> dict:
+    """Template for a SARIF run."""
+    sarif_run = {
+        "tool": {
+            "driver": {
+                "name": tool_name,
+                "rules": [],
+            }
+        },
+        "results": [
+        ],
+    }
+
+    return sarif_run
+
+
+def flake8_linter(target: Path) -> None:
     """Run the flake8 linter.
-    
+
     In contrast to the other linters, flake8 has plugin architecture.
 
     We rely on the 'sarif' formatter being installed, which is part of this package.
     """
-    process = run(["flake8", target, "--format", "sarif"], capture_output=True)
+    process = run(["flake8", target, "--format", "sarif"], capture_output=True, check=False)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -46,17 +69,9 @@ def flake8_linter(target: Path, output_filename: str) -> None:
     return sarif["runs"][0]
 
 
-def ruff_format_sarif(results: list[dict[str, Union[str,int]]]) -> dict:
-    sarif_run = {
-        "tool": {
-            "driver": {
-                "name": "Ruff",
-                "rules": [],
-            }
-        },
-        "results": [
-        ],
-    }
+def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
+    """Convert Ruff output into SARIF."""
+    sarif_run = make_sarif_run("Ruff")
 
     for result in results:
         rule_id = f'ruff/{result["code"]}'
@@ -97,7 +112,7 @@ def ruff_format_sarif(results: list[dict[str, Union[str,int]]]) -> dict:
 
         # append rule ID and label to the SARIF
         rules = sarif_run["tool"]["driver"]["rules"]
-        
+
         if rule_id not in [rule["id"] for rule in rules]:
             sarif_rule = {
                 "id": rule_id,
@@ -110,7 +125,7 @@ def ruff_format_sarif(results: list[dict[str, Union[str,int]]]) -> dict:
     return sarif_run
 
 
-def ruff_linter(target: Path, *args) -> dict:
+def ruff_linter(target: Path) -> Optional[dict]:
     """Run the ruff linter."""
     from ruff import __main__ as ruff
     try:
@@ -119,7 +134,7 @@ def ruff_linter(target: Path, *args) -> dict:
         ruff_exe = "ruff" if sys.platform != "win32" else "ruff.exe"
 
     # call ruff, capture STDOUT and STDERR using subprocess
-    process = run([ruff_exe, target, "--format", "json"], capture_output=True)
+    process = run([ruff_exe, target, "--format", "json"], capture_output=True, check=False)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -138,17 +153,8 @@ def ruff_linter(target: Path, *args) -> dict:
     return sarif_run
 
 
-def pylint_format_sarif(results: list[dict[str, Union[str,int]]], target: Path) -> dict:
-    sarif_run = {
-        "tool": {
-            "driver": {
-                "name": "Pylint",
-                "rules": [],
-            }
-        },
-        "results": [
-        ],
-    }
+def pylint_format_sarif(results: list[dict[str, Union[str, int]]], target: Path) -> dict:
+    sarif_run = make_sarif_run("Pylint")
 
     for result in results:
         rule_id = f'pylint/{result["message-id"]}'
@@ -196,9 +202,9 @@ def pylint_format_sarif(results: list[dict[str, Union[str,int]]], target: Path) 
     return sarif_run
 
 
-def pylint_linter(target: Path, *args) -> dict:
+def pylint_linter(target: Path) -> Optional[dict]:
     """Run the pylint linter."""
-    process = run(["pylint", "--output-format=json", "--recursive=y", target.absolute().as_posix()], capture_output=True)
+    process = run(["pylint", "--output-format=json", "--recursive=y", target.absolute().as_posix()], capture_output=True, check=False)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -219,16 +225,7 @@ def pylint_linter(target: Path, *args) -> dict:
 
 def mypy_format_sarif(mypy_results: str) -> dict:
     """Convert MyPy output into SARIF."""
-    sarif_run = {
-        "tool": {
-            "driver": {
-                "name": "MyPy",
-                "rules": [],
-            }
-        },
-        "results": [
-        ],
-    }
+    sarif_run = make_sarif_run("MyPy")
 
     # regex to remove specifics from messages to auto-generate rule IDs
     remove_quotations = re.compile(r'"[^"]*"')
@@ -252,13 +249,15 @@ def mypy_format_sarif(mypy_results: str) -> dict:
 
         level, rule_msg = message.split(": ", 1)
 
-        rule_text, rule_id = rule_msg.split("  [", 1)
-        
-        rule_id = rule_id.rstrip("]")
-        rule_id = f"mypy/{rule_id}"
+        if " [" in rule_msg:
+            rule_text, rule_id = rule_msg.split("  [", 1)
+            rule_id = rule_id.rstrip("]")
+            rule_id = f"mypy/{rule_id}"
 
-        rule_text = remove_quotations.sub('"..."', rule_text)
-        rule_text = remove_numbers.sub("N", rule_text)
+            rule_text = remove_quotations.sub('"..."', rule_text)
+            rule_text = remove_numbers.sub("N", rule_text)
+        else:
+            rule_text, rule_id = "MyPy built-in", "mypy/builtin"
 
         sarif_level = mypy_to_sarif_levels.get(level, "note")
 
@@ -301,11 +300,11 @@ def mypy_format_sarif(mypy_results: str) -> dict:
     return sarif_run
 
 
-def mypy_linter(target: Path, output_filename: str) -> dict:
+def mypy_linter(target: Path) -> Optional[dict]:
     """Run the mypy linter."""
     mypy_args = ["--ignore-missing-imports", "--no-error-summary", "--no-pretty", "--show-error-codes", "--show-column-numbers", "--show-error-end", "--show-absolute-path"]
 
-    process = run(["mypy", *mypy_args, target.absolute().as_posix()], capture_output=True)
+    process = run(["mypy", *mypy_args, target.absolute().as_posix()], capture_output=True, check=False)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -323,16 +322,7 @@ def mypy_linter(target: Path, output_filename: str) -> dict:
 def pyright_format_sarif(results: dict) -> dict:
     pyright_version = results["version"]
 
-    sarif_run = {
-        "tool": {
-            "driver": {
-                "name": f"Pyright {pyright_version}",
-                "rules": [],
-            }
-        },
-        "results": [
-        ],
-    }
+    sarif_run = make_sarif_run(f"Pyright {pyright_version}")
 
     for diagnostic in results["generalDiagnostics"]:
         filename = diagnostic["file"]
@@ -383,9 +373,9 @@ def pyright_format_sarif(results: dict) -> dict:
     return sarif_run
 
 
-def pyright_linter(target: Path, output_filename: str) -> dict:
+def pyright_linter(target: Path) -> Optional[dict]:
     """Run the pyright linter."""
-    process = run(["pyright", "--outputjson", target.absolute().as_posix()], capture_output=True)
+    process = run(["pyright", "--outputjson", target.absolute().as_posix()], capture_output=True, check=False)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -407,16 +397,7 @@ def pyright_linter(target: Path, output_filename: str) -> dict:
 def pytype_format_sarif(results: str) -> dict:
     """Convert PyType output into SARIF."""
 
-    sarif_run = {
-        "tool": {
-            "driver": {
-                "name": "Pytype",
-                "rules": [],
-            }
-        },
-        "results": [
-        ],
-    }
+    sarif_run = make_sarif_run("Pytype")
 
     pytype_re = re.compile(r'File "(?P<filename>[^"]+)", line (?P<line>\d+), in (?P<scope>\S+): (?P<message>.*) \[(?P<rule>[a-z-]+)\]')
 
@@ -469,9 +450,9 @@ def pytype_format_sarif(results: str) -> dict:
     return sarif_run
 
 
-def pytype_linter(target: Path, *args) -> dict:
+def pytype_linter(target: Path) -> Optional[dict]:
     """Run the pytype linter."""
-    process = run(["pytype", "--exclude", ".pytype/", "--", target.absolute().as_posix()], capture_output=True)
+    process = run(["pytype", "--exclude", ".pytype/", "--", target.absolute().as_posix()], capture_output=True, check=False)
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -489,7 +470,82 @@ def pytype_linter(target: Path, *args) -> dict:
     return sarif_run
 
 
-LINTERS = {"pylint": pylint_linter, "ruff": ruff_linter, "flake8": flake8_linter, "mypy": mypy_linter, "pyright": pyright_linter}
+def fixit_format_sarif(results: str) -> dict:
+    """Convert fixit output into SARIF."""
+    sarif_run = make_sarif_run("Fixit")
+
+    fixit_re = re.compile(r'^(?P<filename>[^@]+)@(?P<line>\d+):(?P<column>\d+) (?P<rule>[A-Za-z]+): (?P<message>.*)$')
+
+    for line in results.split("\n"):
+        if match := fixit_re.search(line):
+            filename = match.group("filename")
+            line_number = int(match.group("line"))
+            column = int(match.group("column"))
+            message = match.group("message")
+            rule = match.group("rule")
+
+            rule_id = f"fixit/{rule}"
+
+            sarif_result = {
+                "ruleId": rule_id,
+                "level": "note",
+                "message": {
+                    "text": message,
+                },
+                "locations": [
+                    {
+                        "physicalLocation": {
+                            "artifactLocation": {
+                                "uri": Path(filename).resolve().absolute().as_uri(),
+                            },
+                            "region": {
+                                "startLine": line_number,
+                                "startColumn": column,
+                                "endLine": line_number,
+                                "endColumn": column,
+                            }
+                        }
+                    }
+                ],
+            }
+
+            sarif_run["results"].append(sarif_result)
+
+            # append the rule if we haven't already recorded it in the rules array
+            rules = sarif_run["tool"]["driver"]["rules"]
+            if rule_id not in [rule["id"] for rule in rules]:
+                sarif_rule = {
+                    "id": rule_id,
+                    "shortDescription": {
+                        "text": rule_id,
+                    },
+                }
+                rules.append(sarif_rule)
+
+    return sarif_run
+
+
+def fixit_linter(target: Path) -> Optional[dict]:
+    """Run the fixit linter, from Meta."""
+    process = run(["fixit", "lint", target.absolute().as_posix()], capture_output=True, check=False)
+
+    if process.returncode > 1:
+        LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
+        return None
+
+    if not process.stdout:
+        LOG.debug("No output from fixit")
+        return None
+
+    # process STDOUT
+    results = process.stdout.decode("utf-8")
+
+    sarif_run = fixit_format_sarif(results)
+
+    return sarif_run
+
+
+LINTERS = {"pylint": pylint_linter, "ruff": ruff_linter, "flake8": flake8_linter, "mypy": mypy_linter, "pyright": pyright_linter, "fixit": fixit_linter}
 
 # pytype is only supported on Python 3.10 and below, at the time of writing
 if sys.version_info[0] == 3 and sys.version_info[1] <= 10:
@@ -512,21 +568,20 @@ def main() -> None:
 
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
 
-    if any([linter not in LINTERS for linter in args.linter]):
-        LOG.error(f"Invalid linter choice: {args.linter}")
-        exit(1)
+    if any({linter not in LINTERS for linter in args.linter}):
+        LOG.error("Invalid linter choice: %s", args.linter)
+        sys.exit(1)
 
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
-        "runs": [
-        ]
+        "runs": []
     }
 
     for linter in args.linter:
         LOG.debug("Running %s", linter)
 
-        sarif_run = LINTERS[linter](Path(args.target).absolute(), args.output)
+        sarif_run = LINTERS[linter](Path(args.target).absolute())
 
         if sarif_run is not None:
             sarif["runs"].append(sarif_run)
