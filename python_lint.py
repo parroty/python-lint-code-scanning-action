@@ -233,7 +233,6 @@ def mypy_format_sarif(mypy_results: str) -> dict:
     # regex to remove specifics from messages to auto-generate rule IDs
     remove_quotations = re.compile(r'"[^"]*"')
     remove_numbers = re.compile(r"\d+")
-    replace_spaces = re.compile(r"\s+")
 
     mypy_to_sarif_levels = {
         "error": "error",
@@ -304,8 +303,6 @@ def mypy_format_sarif(mypy_results: str) -> dict:
 
 def mypy_linter(target: Path, output_filename: str) -> dict:
     """Run the mypy linter."""
-    mypy_junit_xml = Path(output_filename).with_suffix(".xml")
-
     mypy_args = ["--ignore-missing-imports", "--no-error-summary", "--no-pretty", "--show-error-codes", "--show-column-numbers", "--show-error-end", "--show-absolute-path"]
 
     process = run(["mypy", *mypy_args, target.absolute().as_posix()], capture_output=True)
