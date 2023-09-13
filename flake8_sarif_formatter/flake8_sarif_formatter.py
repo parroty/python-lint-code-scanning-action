@@ -4,6 +4,7 @@ import sys
 import json
 from flake8.formatting import base
 from flake8.style_guide import Violation
+from pathlib import Path
 
 
 class SarifFormatter(base.BaseFormatter):
@@ -35,8 +36,10 @@ class SarifFormatter(base.BaseFormatter):
 
     def handle(self, error: Violation):
         """Convert the error into a SARIF result, and append it to the SARIF."""
+        rule_id = f'flake8/{error.code}'
+
         sarif_result = {
-            "ruleId": error.code,
+            "ruleId": rule_id,
             "level": "note",
             "message": {
                 "text": error.text,
@@ -45,7 +48,7 @@ class SarifFormatter(base.BaseFormatter):
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": error.filename,
+                            "uri": Path(error.filename).resolve().absolute().as_uri(),
                         },
                         "region": {
                             "startLine": error.line_number,
@@ -62,7 +65,7 @@ class SarifFormatter(base.BaseFormatter):
 
         if error.code not in [rule["id"] for rule in self.sarif_rules]:
             sarif_rule = {
-                "id": error.code,
+                "id": rule_id,
                 "shortDescription": {
                     "text": error.code,
                 },

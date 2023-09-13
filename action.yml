@@ -14,6 +14,11 @@ inputs:
     description: 'The output file'
     required: false
     default: 'python_linter.sarif'
+  python-version:
+    description: 'The version of python to use'
+    required: false
+    default: '3.10'
+    choices: ['3.11', '3.10', '3.9', '3.8', '3.7']
 runs:
   using: 'composite'
   steps:
@@ -22,7 +27,7 @@ runs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: ${{ inputs.python-version }}
     - name: Run Python Lint
       run: |
         if [ "${OSTYPE}" == "msys" ]; then
@@ -30,7 +35,7 @@ runs:
         else
           PYTHON_CMD=python3
         fi
-        "${PYTHON_CMD}" -mpip install ruff flake8 pylint
+        "${PYTHON_CMD}" -mpip install ruff flake8 pylint mypy pyright pytype
         "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
         "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${GITHUB_WORKSPACE}/${INPUTS_OUTPUT}"
       env:
