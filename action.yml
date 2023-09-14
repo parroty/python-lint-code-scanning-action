@@ -5,7 +5,7 @@ inputs:
     description: 'The linter to use'
     required: true
     default: 'flake8'
-    choices: ['flake8', 'pylint', 'ruff']
+    choices: ['ruff', 'flake8', 'pylint', 'mypy', 'pyright', 'pytype', 'fixit']
   target:
     description: 'The target to lint'
     required: true
@@ -30,14 +30,21 @@ runs:
         python-version: ${{ inputs.python-version }}
     - name: Run Python Lint
       run: |
-        if [ "${OSTYPE}" == "msys" ]; then
+        if [[ "${OSTYPE}" == "msys" ]]; then
           PYTHON_CMD=python
         else
           PYTHON_CMD=python3
         fi
-        "${PYTHON_CMD}" -mpip install ruff flake8 pylint mypy pyright pytype
-        "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
-        "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${GITHUB_WORKSPACE}/${INPUTS_OUTPUT}"
+        linters=('ruff' 'flake8' 'pylint' 'mypy' 'pyright' 'pytype' 'fixit')
+        if [[ "${array[*]}" =~ (^|[^[:alpha:]])${INPUTS_LINTER}([^[:alpha:]]|$) ]]; then
+          "${PYTHON_CMD}" -mpip install "${INPUTS_LINTER}"
+          if [ "${INPUTS_LINTER}" == "flake8" ]; then
+            "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
+          fi
+          "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${GITHUB_WORKSPACE}/${INPUTS_OUTPUT}"
+        else
+          echo "::error: invalid linter ${INPUTS_LINTER}; choose one of ${linters[*]}"
+        fi
       env:
         INPUTS_LINTER: ${{ inputs.linter }}
         INPUTS_TARGET: ${{ inputs.target }}
