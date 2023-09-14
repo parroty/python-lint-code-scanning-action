@@ -68,7 +68,7 @@ def flake8_linter(target: Path) -> None:
     return sarif["runs"][0]
 
 
-def ruff_format_sarif(results: list[dict[str, Any]]) -> dict:
+def ruff_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
     """Convert Ruff output into SARIF."""
     sarif_run = make_sarif_run("Ruff")
 
@@ -95,7 +95,7 @@ def ruff_format_sarif(results: list[dict[str, Any]]) -> dict:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": Path(str(filename)).resolve().absolute().as_uri(),
+                            "uri": Path(str(filename)).resolve().absolute().relative_to(target).as_posix(),
                         },
                         "region": {
                             "startLine": start_line,
@@ -129,10 +129,14 @@ def ruff_format_sarif(results: list[dict[str, Any]]) -> dict:
 
 def ruff_linter(target: Path) -> Optional[dict]:
     """Run the ruff linter."""
+    try:
     # pylint: disable=import-outside-toplevel
-    from ruff import __main__ as ruff
+        from ruff import __main__ as ruff
 
     # pylint: enable=import-outside-toplevel
+    except ImportError:
+        LOG.error("Unable to import ruff")
+        return None
 
     try:
         ruff_exe = ruff.find_ruff_bin()
@@ -154,19 +158,19 @@ def ruff_linter(target: Path) -> Optional[dict]:
     results = json.loads(process.stdout.decode("utf-8"))
 
     # format the ruff JSON into SARIF
-    sarif_run = ruff_format_sarif(results)
+    sarif_run = ruff_format_sarif(results, target)
 
     return sarif_run
 
 
-def pylint_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
+def pylint_format_sarif(results: list[dict[str, Any]], _target: Path) -> dict:
     """Convert Pylint output into SARIF."""
     sarif_run = make_sarif_run("Pylint")
 
     for result in results:
         rule_id = f'pylint/{result["message-id"]}'
         message = result["message"]
-        filename = target.resolve().parent.absolute().joinpath(str(result["path"])).as_uri()
+        filename = Path(str(result["path"])).as_posix()
         start_line = int(result["line"])
         start_column = int(result["column"]) + 1
         end_line = int(result["endLine"]) if result["endLine"] is not None else int(result["line"])
@@ -243,7 +247,7 @@ REMOVE_NUMBERS = re.compile(r"\d+")
 MYPY_TO_SARIF_LEVELS = {"error": "error", "warning": "warning", "note": "note"}
 
 
-def mypy_format_sarif(mypy_results: str) -> dict:
+def mypy_format_sarif(mypy_results: str, target: Path) -> dict:
     """Convert MyPy output into SARIF."""
     sarif_run = make_sarif_run("MyPy")
 
@@ -285,7 +289,7 @@ def mypy_format_sarif(mypy_results: str) -> dict:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": Path(str(filename)).resolve().absolute().as_uri(),
+                            "uri": Path(str(filename)).resolve().relative_to(target).as_posix(),
                         },
                         "region": {
                             "startLine": int(start_line),
@@ -335,12 +339,12 @@ def mypy_linter(target: Path) -> Optional[dict]:
     if not process.stdout:
         return None
 
-    sarif_run = mypy_format_sarif(process.stdout.decode("utf-8"))
+    sarif_run = mypy_format_sarif(process.stdout.decode("utf-8"), target)
 
     return sarif_run
 
 
-def pyright_format_sarif(results: dict) -> dict:
+def pyright_format_sarif(results: dict, target: Path) -> dict:
     """Convert Pyright output into SARIF."""
     pyright_version = results["version"]
 
@@ -366,7 +370,7 @@ def pyright_format_sarif(results: dict) -> dict:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": Path(filename).resolve().absolute().as_uri(),
+                            "uri": Path(filename).resolve().relative_to(target).as_posix(),
                         },
                         "region": {
                             "startLine": start_line,
@@ -411,12 +415,12 @@ def pyright_linter(target: Path) -> Optional[dict]:
     results = json.loads(process.stdout.decode("utf-8"))
 
     # format the pyright JSON into SARIF
-    sarif_run = pyright_format_sarif(results)
+    sarif_run = pyright_format_sarif(results, target)
 
     return sarif_run
 
 
-def pytype_format_sarif(results: str) -> dict:
+def pytype_format_sarif(results: str, target: Path) -> dict:
     """Convert PyType output into SARIF."""
 
     sarif_run = make_sarif_run("Pytype")
@@ -444,7 +448,7 @@ def pytype_format_sarif(results: str) -> dict:
                     {
                         "physicalLocation": {
                             "artifactLocation": {
-                                "uri": Path(filename).resolve().absolute().as_uri(),
+                                "uri": Path(filename).resolve().relative_to(target).as_posix(),
                             },
                             "region": {
                                 "startLine": line_number,
@@ -490,12 +494,12 @@ def pytype_linter(target: Path) -> Optional[dict]:
     # process STDOUT
     results = process.stdout.decode("utf-8")
 
-    sarif_run = pytype_format_sarif(results)
+    sarif_run = pytype_format_sarif(results, target)
 
     return sarif_run
 
 
-def fixit_format_sarif(results: str) -> dict:
+def fixit_format_sarif(results: str, target: Path) -> dict:
     """Convert fixit output into SARIF."""
     sarif_run = make_sarif_run("Fixit")
 
@@ -521,7 +525,7 @@ def fixit_format_sarif(results: str) -> dict:
                     {
                         "physicalLocation": {
                             "artifactLocation": {
-                                "uri": Path(filename).resolve().absolute().as_uri(),
+                                "uri": Path(filename).resolve().relative_to(target).as_posix(),
                             },
                             "region": {
                                 "startLine": line_number,
@@ -565,7 +569,7 @@ def fixit_linter(target: Path) -> Optional[dict]:
     # process STDOUT
     results = process.stdout.decode("utf-8")
 
-    sarif_run = fixit_format_sarif(results)
+    sarif_run = fixit_format_sarif(results, target)
 
     return sarif_run
 
