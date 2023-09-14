@@ -16,7 +16,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from subprocess import run
 import json
-from typing import Union, Optional
+from typing import Optional, Any
 import re
 
 
@@ -68,7 +68,7 @@ def flake8_linter(target: Path) -> None:
     return sarif["runs"][0]
 
 
-def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
+def ruff_format_sarif(results: list[dict[str, Any]]) -> dict:
     """Convert Ruff output into SARIF."""
     sarif_run = make_sarif_run("Ruff")
 
@@ -77,10 +77,13 @@ def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
         filename = result["filename"]
         message = result["message"]
 
-        start_line = result["location"]["row"]
-        start_column = result["location"]["column"]
-        end_line = result["end_location"]["row"]
-        end_column = result["end_location"]["column"]
+        location: dict[str, int] = result["location"]
+        end_location: dict[str, int] = result["end_location"]
+
+        start_line = location["row"]
+        start_column = location["column"]
+        end_line = end_location["row"]
+        end_column = end_location["column"]
 
         sarif_result = {
             "ruleId": rule_id,
@@ -92,7 +95,7 @@ def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": Path(filename).resolve().absolute().as_uri(),
+                            "uri": Path(str(filename)).resolve().absolute().as_uri(),
                         },
                         "region": {
                             "startLine": start_line,
@@ -126,7 +129,10 @@ def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
 
 def ruff_linter(target: Path) -> Optional[dict]:
     """Run the ruff linter."""
+    # pylint: disable=import-outside-toplevel
     from ruff import __main__ as ruff
+
+    # pylint: enable=import-outside-toplevel
 
     try:
         ruff_exe = ruff.find_ruff_bin()
@@ -153,38 +159,41 @@ def ruff_linter(target: Path) -> Optional[dict]:
     return sarif_run
 
 
-def pylint_format_sarif(results: list[dict[str, Union[str, int]]], target: Path) -> dict:
+def pylint_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
+    """Convert Pylint output into SARIF."""
     sarif_run = make_sarif_run("Pylint")
 
     for result in results:
         rule_id = f'pylint/{result["message-id"]}'
+        message = result["message"]
+        filename = target.resolve().parent.absolute().joinpath(str(result["path"])).as_uri()
+        start_line = int(result["line"])
+        start_column = int(result["column"]) + 1
+        end_line = int(result["endLine"]) if result["endLine"] is not None else int(result["line"])
+        end_column = int(result["endColumn"]) if result["endColumn"] is not None else int(result["column"]) + 1
 
         # append result to SARIF
         sarif_result = {
             "ruleId": rule_id,
             "level": "note",
             "message": {
-                "text": result["message"],
+                "text": message,
             },
             "locations": [
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": target.resolve().parent.absolute().joinpath(result["path"]).as_uri(),
+                            "uri": filename,
                         },
                         "region": {
-                            "startLine": result["line"],
-                            "startColumn": result["column"] + 1,
-                            "endLine": result["endLine"] if result["endLine"] is not None else result["line"],
-                            "endColumn": result["endColumn"]
-                            if result["endColumn"] is not None
-                            else result["column"] + 1,
+                            "startLine": start_line,
+                            "startColumn": start_column,
+                            "endLine": end_line,
+                            "endColumn": end_column,
                         },
                     }
                 }
             ],
-            # TODO: think about how to add "fix" into the SARIF
-            # Code Scanning doesn't do anything with it, so it isn't a high priority
         }
 
         sarif_run["results"].append(sarif_result)
@@ -229,15 +238,14 @@ def pylint_linter(target: Path) -> Optional[dict]:
     return sarif_run
 
 
+REMOVE_QUOTATIONS = re.compile(r'"[^"]*"')
+REMOVE_NUMBERS = re.compile(r"\d+")
+MYPY_TO_SARIF_LEVELS = {"error": "error", "warning": "warning", "note": "note"}
+
+
 def mypy_format_sarif(mypy_results: str) -> dict:
     """Convert MyPy output into SARIF."""
     sarif_run = make_sarif_run("MyPy")
-
-    # regex to remove specifics from messages to auto-generate rule IDs
-    remove_quotations = re.compile(r'"[^"]*"')
-    remove_numbers = re.compile(r"\d+")
-
-    mypy_to_sarif_levels = {"error": "error", "warning": "warning", "note": "note"}
 
     for result in mypy_results.split("\n"):
         if not result:
@@ -249,6 +257,10 @@ def mypy_format_sarif(mypy_results: str) -> dict:
         # NOTE: assumes we're using `--show-error-end`, which gives the end line/column too
         filename, start_line, start_column, end_line, end_column, *_ = location.split(":") + [1, None, None]
 
+        if filename is None or start_line is None or start_column is None:
+            LOG.error("Unable to parse location: %s", location)
+            continue
+
         level, rule_msg = message.split(": ", 1)
 
         if " [" in rule_msg:
@@ -256,12 +268,12 @@ def mypy_format_sarif(mypy_results: str) -> dict:
             rule_id = rule_id.rstrip("]")
             rule_id = f"mypy/{rule_id}"
 
-            rule_text = remove_quotations.sub('"..."', rule_text)
-            rule_text = remove_numbers.sub("N", rule_text)
+            rule_text = REMOVE_QUOTATIONS.sub('"..."', rule_text)
+            rule_text = REMOVE_NUMBERS.sub("N", rule_text)
         else:
             rule_text, rule_id = "MyPy built-in", "mypy/builtin"
 
-        sarif_level = mypy_to_sarif_levels.get(level, "note")
+        sarif_level = MYPY_TO_SARIF_LEVELS.get(level, "note")
 
         sarif_result = {
             "ruleId": rule_id,
@@ -273,7 +285,7 @@ def mypy_format_sarif(mypy_results: str) -> dict:
                 {
                     "physicalLocation": {
                         "artifactLocation": {
-                            "uri": Path(filename).resolve().absolute().as_uri(),
+                            "uri": Path(str(filename)).resolve().absolute().as_uri(),
                         },
                         "region": {
                             "startLine": int(start_line),
@@ -321,7 +333,6 @@ def mypy_linter(target: Path) -> Optional[dict]:
         return None
 
     if not process.stdout:
-        LOG.error("No output from mypy")
         return None
 
     sarif_run = mypy_format_sarif(process.stdout.decode("utf-8"))
@@ -418,7 +429,6 @@ def pytype_format_sarif(results: str) -> dict:
         if match := pytype_re.search(line):
             filename = match.group("filename")
             line_number = int(match.group("line"))
-            scope = match.group("scope")
             message = match.group("message")
             rule = match.group("rule")
 
@@ -594,11 +604,7 @@ def main() -> None:
         LOG.error("Invalid linter choice: %s", args.linter)
         sys.exit(1)
 
-    sarif = {
-        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-        "version": "2.1.0",
-        "runs": [],
-    }
+    sarif_runs: list[dict] = []
 
     for linter in args.linter:
         LOG.debug("Running %s", linter)
@@ -606,7 +612,13 @@ def main() -> None:
         sarif_run = LINTERS[linter](Path(args.target).absolute())
 
         if sarif_run is not None:
-            sarif["runs"].append(sarif_run)
+            sarif_runs.append(sarif_run)
+
+    sarif = {
+        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+        "version": "2.1.0",
+        "runs": sarif_runs,
+    }
 
     # output SARIF
     with open(f"{args.output}", "w", encoding="utf-8") as sarif_file:
