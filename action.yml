@@ -36,7 +36,7 @@ runs:
           PYTHON_CMD=python3
         fi
         linters=('ruff' 'flake8' 'pylint' 'mypy' 'pyright' 'pytype' 'fixit')
-        if [[ "${array[*]}" =~ (^|[^[:alpha:]])${INPUTS_LINTER}([^[:alpha:]]|$) ]]; then
+        if [[ "${linters[*]}" =~ (^|[^[:alpha:]])${INPUTS_LINTER}([^[:alpha:]]|$) ]]; then
           "${PYTHON_CMD}" -mpip install "${INPUTS_LINTER}"
           if [ "${INPUTS_LINTER}" == "flake8" ]; then
             "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
