@@ -43,7 +43,7 @@ The linter/type checker can be one or more of `flake8`, `pylint`, `ruff`, `mypy`
 ### Action
 
 ```yaml
-use: aegilops/python-lint-code-scanning-action@main
+use: aegilops/python-lint-code-scanning-action@v0.0.1
 with:
   linter: flake8
 ```
@@ -58,7 +58,7 @@ jobs:
       matrix:
         linter: [flake8, pylint, ruff, mypy, pytype, pyright, fixit]
     steps:
-      - use: aegilops/python-lint-code-scanning-action@main
+      - use: aegilops/python-lint-code-scanning-action@v0.0.1
         with:
           linter: ${{ matrix.linter }}
 ```
@@ -74,7 +74,7 @@ jobs:
       matrix:
         python-version: [3.7, 3.8, 3.9, 3.10, 3.11]
     steps:
-      - use: aegilops/python-lint-code-scanning-action@main
+      - use: aegilops/python-lint-code-scanning-action@v0.0.1
         with:
           linter: flake8
           python-version: ${{ matrix.python-version }}
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: python3 -mpip install flake8-bugbear
-      - use: aegilops/python-lint-code-scanning-action@main
+      - use: aegilops/python-lint-code-scanning-action@v0.0.1
         with:
           linter: flake8
 ```
