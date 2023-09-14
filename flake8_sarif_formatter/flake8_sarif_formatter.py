@@ -60,7 +60,7 @@ class SarifFormatter(base.BaseFormatter):
 
         self.sarif_results.append(sarif_result)
 
-        if error.code not in [rule["id"] for rule in self.sarif_rules]:
+        if rule_id not in [rule["id"] for rule in self.sarif_rules]:
             sarif_rule = {
                 "id": rule_id,
                 "shortDescription": {
