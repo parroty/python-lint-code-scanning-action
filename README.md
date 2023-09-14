@@ -1,6 +1,7 @@
 # Python Linting Action
 
 > ⚠️ this is work in progress ⚠️
+>
 > 🚨 it does not use an open source license yet, and comes with no support guarantees at all - it is pre-release and still in alpha/testing 🚨
 
 This Action and Python script lets you run one of several Python linters and type checkers, and upload the results to GitHub's Code Scanning.
@@ -34,7 +35,7 @@ python3 -m pip install ./flake8_sarif_formatter
 Then run the linter:
 
 ```bash
-python3 ./python_lint <linter> [<options>]
+python3 ./python_lint <linter> [<linter> ...] [<options>]
 ```
 
 The linter/type checker can be one or more of `flake8`, `pylint`, `ruff`, `mypy`, `pytype`, `pyright`, `fixit`.
@@ -71,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, 3.10]
+        python-version: [3.7, 3.8, 3.9, 3.10, 3.11]
     steps:
       - use: aegilops/python-lint-code-scanning-action@main
         with:
@@ -89,7 +90,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: python3 -mpip install flake8-bugbear
-      - use: aegilops/python-lint-code-scanning-action@v1
+      - use: aegilops/python-lint-code-scanning-action@main
         with:
           linter: flake8
 ```
+
+Configure the linters using a configuration file in your repository, appropriate to the linter.
+
+Many can use `pyproject.toml`, but not all.
+
+Example `pyproject.toml` and `.flake8` files for linting this repository are included.
