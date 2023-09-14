@@ -1,0 +1,22 @@
+name: Python Lint Workflow
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    # The branches below must be a subset of the branches above
+    branches: [ "main" ]
+  schedule:
+    - cron: '22 3 * * 2'  # please pick a different time
+  workflow_dispatch:
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        linter: [flake8, pylint, ruff, mypy, pytype, pyright, fixit]
+    steps:
+      - name: Run Python Lint
+        uses: aegilops/python-lint-code-scanning-action@v0.0.1
+        with:
+          linter: ${{ matrix.linter }}
+          python-version: 3.10
