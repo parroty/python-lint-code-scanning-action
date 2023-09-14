@@ -163,14 +163,14 @@ def ruff_linter(target: Path) -> Optional[dict]:
     return sarif_run
 
 
-def pylint_format_sarif(results: list[dict[str, Any]], _target: Path) -> dict:
+def pylint_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
     """Convert Pylint output into SARIF."""
     sarif_run = make_sarif_run("Pylint")
 
     for result in results:
         rule_id = f'pylint/{result["message-id"]}'
         message = result["message"]
-        filename = Path(str(result["path"])).as_posix()
+        filename = Path(str(result["path"])).relative_to(target).as_posix()
         start_line = int(result["line"])
         start_column = int(result["column"]) + 1
         end_line = int(result["endLine"]) if result["endLine"] is not None else int(result["line"])
