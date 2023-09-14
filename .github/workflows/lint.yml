@@ -4,10 +4,13 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        linter: [flake8, pylint, ruff, mypy, pytype, pyright, fixit]
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run Python Lint
         uses: aegilops/python-lint-code-scanning-action@main
         with:
-          linter: ruff
+          linter: ${{ matrix.linter }}
