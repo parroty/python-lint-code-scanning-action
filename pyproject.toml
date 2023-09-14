@@ -11,6 +11,7 @@ ignore-paths = ["\\.git", "__pycache__", ".*\\.egg", "build", "\\.pytype", "\\.m
 [tool.black] 
 line-length = 120
 target-version = ['py310']
+exclude = "/(\\.direnv|\\.eggs|\\.git|\\.mypy_cache|\\.nox|\\.tox|\\.venv|venv|\\.ipynb_checkpoints|_build|buck-out|build|dist|__pypackages__|\\.pytype)/"
 
 [tool.mypy]
 python_version = "3.10"
@@ -18,3 +19,9 @@ ignore_missing_imports = true
 
 [tool.pytype]
 python_version = "3.10"
+
+[tool.fixit]
+root = true
+python-version = "3.10"
+formatter = "black"
+
