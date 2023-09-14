@@ -28,6 +28,7 @@ def boop(hello: int) -> None:
     print(hello)
     return None
 
+
 def beep(hello: int) -> None:
     """Wrong spacing before the function."""
     print(hello)
@@ -39,7 +40,9 @@ def main() -> None:
     print("Hello, world!")
 
     # a very long line
-    print("This is a very long line aaaaaa aaaaa aaaaaa aaaaaaa aaaaaa aaaaaaa aaaaaaa aaaaaaaa aaaaaaa aaaaaaa aaaaaaaa aaaaa")
+    print(
+        "This is a very long line aaaaaa aaaaa aaaaaa aaaaaaa aaaaaa aaaaaaa aaaaaaa aaaaaaaa aaaaaaa aaaaaaa aaaaaaaa aaaaa"
+    )
 
     # an unused variable
     unused_variable = 1

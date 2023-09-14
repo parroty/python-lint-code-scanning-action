@@ -22,10 +22,7 @@ class SarifFormatter(base.BaseFormatter):
             "runs": [
                 {
                     "tool": {
-                        "driver": {
-                            "name": "Flake8",
-                            "rules": self.sarif_rules
-                        },
+                        "driver": {"name": "Flake8", "rules": self.sarif_rules},
                     },
                     "results": self.sarif_results,
                 }
@@ -36,7 +33,7 @@ class SarifFormatter(base.BaseFormatter):
 
     def handle(self, error: Violation):
         """Convert the error into a SARIF result, and append it to the SARIF."""
-        rule_id = f'flake8/{error.code}'
+        rule_id = f"flake8/{error.code}"
 
         sarif_result = {
             "ruleId": rule_id,
@@ -55,7 +52,7 @@ class SarifFormatter(base.BaseFormatter):
                             "startColumn": error.column_number,
                             "endLine": error.line_number,
                             "endColumn": error.column_number,
-                        }
+                        },
                     }
                 }
             ],

@@ -39,8 +39,7 @@ def make_sarif_run(tool_name: str) -> dict:
                 "rules": [],
             }
         },
-        "results": [
-        ],
+        "results": [],
     }
 
     return sarif_run
@@ -100,7 +99,7 @@ def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
                             "startColumn": start_column,
                             "endLine": end_line,
                             "endColumn": end_column,
-                        }
+                        },
                     }
                 }
             ],
@@ -128,6 +127,7 @@ def ruff_format_sarif(results: list[dict[str, Union[str, int]]]) -> dict:
 def ruff_linter(target: Path) -> Optional[dict]:
     """Run the ruff linter."""
     from ruff import __main__ as ruff
+
     try:
         ruff_exe = ruff.find_ruff_bin()
     except AttributeError:
@@ -174,10 +174,12 @@ def pylint_format_sarif(results: list[dict[str, Union[str, int]]], target: Path)
                         },
                         "region": {
                             "startLine": result["line"],
-                            "startColumn": result["column"]+1,
+                            "startColumn": result["column"] + 1,
                             "endLine": result["endLine"] if result["endLine"] is not None else result["line"],
-                            "endColumn": result["endColumn"] if result["endColumn"] is not None else result["column"]+1,
-                        }
+                            "endColumn": result["endColumn"]
+                            if result["endColumn"] is not None
+                            else result["column"] + 1,
+                        },
                     }
                 }
             ],
@@ -204,7 +206,11 @@ def pylint_format_sarif(results: list[dict[str, Union[str, int]]], target: Path)
 
 def pylint_linter(target: Path) -> Optional[dict]:
     """Run the pylint linter."""
-    process = run(["pylint", "--output-format=json", "--recursive=y", target.absolute().as_posix()], capture_output=True, check=False)
+    process = run(
+        ["pylint", "--output-format=json", "--recursive=y", target.absolute().as_posix()],
+        capture_output=True,
+        check=False,
+    )
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -231,11 +237,7 @@ def mypy_format_sarif(mypy_results: str) -> dict:
     remove_quotations = re.compile(r'"[^"]*"')
     remove_numbers = re.compile(r"\d+")
 
-    mypy_to_sarif_levels = {
-        "error": "error",
-        "warning": "warning",
-        "note": "note"
-    }
+    mypy_to_sarif_levels = {"error": "error", "warning": "warning", "note": "note"}
 
     for result in mypy_results.split("\n"):
         if not result:
@@ -278,10 +280,10 @@ def mypy_format_sarif(mypy_results: str) -> dict:
                             "startColumn": int(start_column),
                             "endLine": int(end_line) if end_line is not None else start_line,
                             "endColumn": int(end_column) if end_column is not None else start_column,
-                        }
+                        },
                     }
                 }
-            ]
+            ],
         }
 
         sarif_run["results"].append(sarif_result)
@@ -302,7 +304,15 @@ def mypy_format_sarif(mypy_results: str) -> dict:
 
 def mypy_linter(target: Path) -> Optional[dict]:
     """Run the mypy linter."""
-    mypy_args = ["--ignore-missing-imports", "--no-error-summary", "--no-pretty", "--show-error-codes", "--show-column-numbers", "--show-error-end", "--show-absolute-path"]
+    mypy_args = [
+        "--ignore-missing-imports",
+        "--no-error-summary",
+        "--no-pretty",
+        "--show-error-codes",
+        "--show-column-numbers",
+        "--show-error-end",
+        "--show-absolute-path",
+    ]
 
     process = run(["mypy", *mypy_args, target.absolute().as_posix()], capture_output=True, check=False)
 
@@ -352,10 +362,10 @@ def pyright_format_sarif(results: dict) -> dict:
                             "startColumn": start_column,
                             "endLine": end_line,
                             "endColumn": end_column,
-                        }
+                        },
                     }
                 }
-            ]
+            ],
         }
 
         sarif_run["results"].append(sarif_result)
@@ -400,7 +410,9 @@ def pytype_format_sarif(results: str) -> dict:
 
     sarif_run = make_sarif_run("Pytype")
 
-    pytype_re = re.compile(r'File "(?P<filename>[^"]+)", line (?P<line>\d+), in (?P<scope>\S+): (?P<message>.*) \[(?P<rule>[a-z-]+)\]')
+    pytype_re = re.compile(
+        r'File "(?P<filename>[^"]+)", line (?P<line>\d+), in (?P<scope>\S+): (?P<message>.*) \[(?P<rule>[a-z-]+)\]'
+    )
 
     for line in results.split("\n"):
         if match := pytype_re.search(line):
@@ -429,7 +441,7 @@ def pytype_format_sarif(results: str) -> dict:
                                 "startColumn": 1,
                                 "endLine": line_number,
                                 "endColumn": 1,
-                            }
+                            },
                         }
                     }
                 ],
@@ -453,7 +465,9 @@ def pytype_format_sarif(results: str) -> dict:
 
 def pytype_linter(target: Path) -> Optional[dict]:
     """Run the pytype linter."""
-    process = run(["pytype", "--exclude", ".pytype/", "--", target.absolute().as_posix()], capture_output=True, check=False)
+    process = run(
+        ["pytype", "--exclude", ".pytype/", "--", target.absolute().as_posix()], capture_output=True, check=False
+    )
 
     if process.stderr:
         LOG.error("STDERR: %s", process.stderr.decode("utf-8"))
@@ -475,7 +489,7 @@ def fixit_format_sarif(results: str) -> dict:
     """Convert fixit output into SARIF."""
     sarif_run = make_sarif_run("Fixit")
 
-    fixit_re = re.compile(r'^(?P<filename>[^@]+)@(?P<line>\d+):(?P<column>\d+) (?P<rule>[A-Za-z]+): (?P<message>.*)$')
+    fixit_re = re.compile(r"^(?P<filename>[^@]+)@(?P<line>\d+):(?P<column>\d+) (?P<rule>[A-Za-z]+): (?P<message>.*)$")
 
     for line in results.split("\n"):
         if match := fixit_re.search(line):
@@ -504,7 +518,7 @@ def fixit_format_sarif(results: str) -> dict:
                                 "startColumn": column,
                                 "endLine": line_number,
                                 "endColumn": column,
-                            }
+                            },
                         }
                     }
                 ],
@@ -546,7 +560,14 @@ def fixit_linter(target: Path) -> Optional[dict]:
     return sarif_run
 
 
-LINTERS = {"pylint": pylint_linter, "ruff": ruff_linter, "flake8": flake8_linter, "mypy": mypy_linter, "pyright": pyright_linter, "fixit": fixit_linter}
+LINTERS = {
+    "pylint": pylint_linter,
+    "ruff": ruff_linter,
+    "flake8": flake8_linter,
+    "mypy": mypy_linter,
+    "pyright": pyright_linter,
+    "fixit": fixit_linter,
+}
 
 # pytype is only supported on Python 3.10 and below, at the time of writing
 if sys.version_info[0] == 3 and sys.version_info[1] <= 10:
@@ -576,7 +597,7 @@ def main() -> None:
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
-        "runs": []
+        "runs": [],
     }
 
     for linter in args.linter:
