@@ -13,6 +13,7 @@ This Action and Python script lets you run one of several Python linters and typ
 - [Mypy](https://mypy.readthedocs.io/en/stable/)
 - [Pytype](https://github.com/google/pytype/) - for Python 3.10 and below only
 - [Pyright](https://github.com/microsoft/pyright)
+- [Fixit 2](https://fixit.readthedocs.io/en/stable/)
 
 ## Requirements
 
@@ -36,7 +37,7 @@ Then run the linter:
 python3 ./python_lint <linter> [<options>]
 ```
 
-The linter/type checker can be one or more of `flake8`, `pylint`, `ruff`, `mypy`, `pytype`, `pyright`.
+The linter/type checker can be one or more of `flake8`, `pylint`, `ruff`, `mypy`, `pytype`, `pyright`, `fixit`.
 
 ### Action
 
@@ -54,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        linter: [flake8, pylint, ruff, mypy, pytype, pyright]
+        linter: [flake8, pylint, ruff, mypy, pytype, pyright, fixit]
     steps:
       - use: aegilops/python-lint-code-scanning-action@main
         with:
