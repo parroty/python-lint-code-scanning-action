@@ -189,7 +189,7 @@ def pylint_format_sarif(results: list[dict[str, Union[str, int]]], target: Path)
 
         # append rule ID and label to the SARIF
         rules = sarif_run["tool"]["driver"]["rules"]
-        
+
         if rule_id not in [rule["id"] for rule in rules]:
             sarif_rule = {
                 "id": rule_id,
@@ -320,6 +320,7 @@ def mypy_linter(target: Path) -> Optional[dict]:
 
 
 def pyright_format_sarif(results: dict) -> dict:
+    """Convert Pyright output into SARIF."""
     pyright_version = results["version"]
 
     sarif_run = make_sarif_run(f"Pyright {pyright_version}")
@@ -587,8 +588,8 @@ def main() -> None:
             sarif["runs"].append(sarif_run)
 
     # output SARIF
-    with open(f"{args.output}", "w") as sf:
-        json.dump(sarif, sf, indent=2)
+    with open(f"{args.output}", "w", encoding="utf-8") as sarif_file:
+        json.dump(sarif, sarif_file, indent=2)
 
 
 if __name__ == "__main__":
