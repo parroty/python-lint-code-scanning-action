@@ -6,6 +6,7 @@ from pathlib import Path
 from flake8.formatting import base
 from flake8.style_guide import Violation
 
+
 class SarifFormatter(base.BaseFormatter):
     """SARIF formatter for Flake8."""
 

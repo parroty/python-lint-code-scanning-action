@@ -130,7 +130,7 @@ def ruff_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
 def ruff_linter(target: Path) -> Optional[dict]:
     """Run the ruff linter."""
     try:
-    # pylint: disable=import-outside-toplevel
+        # pylint: disable=import-outside-toplevel
         from ruff import __main__ as ruff
 
     # pylint: enable=import-outside-toplevel
