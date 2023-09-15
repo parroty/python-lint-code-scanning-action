@@ -71,9 +71,9 @@ def flake8_linter(target: Path) -> None:
 
     if "runs" in sarif and len(sarif["runs"]) > 0:
         return sarif["runs"][0]
-    else:
-        LOG.error("SARIF not correctly formed, or no runs to output")
-        return None
+
+    LOG.error("SARIF not correctly formed, or no runs to output")
+    return None
 
 
 def ruff_format_sarif(results: List[Dict[str, Any]], target: Path) -> dict:
@@ -182,7 +182,7 @@ def pylint_format_sarif(results: List[Dict[str, Any]], target: Path) -> dict:
     for result in results:
         rule_id = f'pylint/{result["message-id"]}'
         message = result["message"]
-        filename = Path(str(result["path"])).as_posix()
+        filename = Path(str(result["path"])).relative_to(target).as_posix()
         start_line = int(result["line"])
         start_column = int(result["column"]) + 1
         end_line = int(result["endLine"]) if result["endLine"] is not None else int(result["line"])

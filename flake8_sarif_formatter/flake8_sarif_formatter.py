@@ -11,6 +11,7 @@ class SarifFormatter(base.BaseFormatter):
     """SARIF formatter for Flake8."""
 
     def after_init(self):
+        """Initialize the SARIF."""
         self.sarif_results = []
         self.sarif_rules = []
 
