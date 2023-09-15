@@ -100,3 +100,23 @@ Configure the linters using a configuration file in your repository, appropriate
 Many can use `pyproject.toml`, but not all.
 
 Example `pyproject.toml` and `.flake8` files for linting this repository are included.
+
+## FAQ
+
+### Why not use the existing Python linting Actions?
+
+They don't all produce SARIF, and they don't upload to Code Scanning
+
+### Why not create N different Actions?
+
+It's far more convenient to have one Action that can run all of the popular linters, so you can configure it once and then run it with different linters.
+
+### Could you let me configure the linters using the Action's inputs?
+
+No, because the configuration files are specific to each linter. Providing convenience abstractions over the inputs for all of the linters would be significantly more work than just using the configuration files.
+
+It's possible that a future release might allow you to specify some very common shared options, such as line-length, but for now that's not been tackled.
+
+### Why not add SARIF output directly to the linters, and then call them?
+
+Good idea. That's something to consider for the future. For now it was quicker and easier to call the linters and process their output into SARIF, vs raising PRs against each linter.
