@@ -16,7 +16,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from subprocess import run
 import json
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 import re
 
 
@@ -68,7 +68,7 @@ def flake8_linter(target: Path) -> None:
     return sarif["runs"][0]
 
 
-def ruff_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
+def ruff_format_sarif(results: List[Dict[str, Any]], target: Path) -> dict:
     """Convert Ruff output into SARIF."""
     sarif_run = make_sarif_run("Ruff")
 
@@ -77,8 +77,8 @@ def ruff_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
         filename = result["filename"]
         message = result["message"]
 
-        location: dict[str, int] = result["location"]
-        end_location: dict[str, int] = result["end_location"]
+        location: Dict[str, int] = result["location"]
+        end_location: Dict[str, int] = result["end_location"]
 
         start_line = location["row"]
         start_column = location["column"]
@@ -163,7 +163,7 @@ def ruff_linter(target: Path) -> Optional[dict]:
     return sarif_run
 
 
-def pylint_format_sarif(results: list[dict[str, Any]], target: Path) -> dict:
+def pylint_format_sarif(results: List[Dict[str, Any]], target: Path) -> dict:
     """Convert Pylint output into SARIF."""
     sarif_run = make_sarif_run("Pylint")
 
@@ -430,7 +430,8 @@ def pytype_format_sarif(results: str, target: Path) -> dict:
     )
 
     for line in results.split("\n"):
-        if match := pytype_re.search(line):
+        match = pytype_re.search(line)
+        if match:
             filename = match.group("filename")
             line_number = int(match.group("line"))
             message = match.group("message")
@@ -506,7 +507,8 @@ def fixit_format_sarif(results: str, target: Path) -> dict:
     fixit_re = re.compile(r"^(?P<filename>[^@]+)@(?P<line>\d+):(?P<column>\d+) (?P<rule>[A-Za-z]+): (?P<message>.*)$")
 
     for line in results.split("\n"):
-        if match := fixit_re.search(line):
+        match = fixit_re.search(line)
+        if match:
             filename = match.group("filename")
             line_number = int(match.group("line"))
             column = int(match.group("column"))
@@ -608,7 +610,7 @@ def main() -> None:
         LOG.error("Invalid linter choice: %s", args.linter)
         sys.exit(1)
 
-    sarif_runs: list[dict] = []
+    sarif_runs: List[dict] = []
 
     for linter in args.linter:
         LOG.debug("Running %s", linter)
