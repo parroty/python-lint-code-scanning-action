@@ -37,10 +37,15 @@ runs:
         fi
         linters=('ruff' 'flake8' 'pylint' 'mypy' 'pyright' 'pytype' 'fixit')
         if [[ "${linters[*]}" =~ (^|[^[:alpha:]])${INPUTS_LINTER}([^[:alpha:]]|$) ]]; then
-          "${PYTHON_CMD}" -mpip install "${INPUTS_LINTER}"
-          if [ "${INPUTS_LINTER}" == "flake8" ]; then
+          if [[ "${INPUTS_LINTER}" == "fixit" ]]; then
+            "${PYTHON_CMD}" -mpip install "fixit >1" --pre
+          else
+            "${PYTHON_CMD}" -mpip install "${INPUTS_LINTER}"
+          fi
+          if [[ "${INPUTS_LINTER}" == "flake8" ]]; then
             "${PYTHON_CMD}" -mpip install "${GITHUB_ACTION_PATH}"/flake8_sarif_formatter
           fi
+
           "${PYTHON_CMD}" "${GITHUB_ACTION_PATH}"/python_lint.py "${INPUTS_LINTER}" --target="${INPUTS_TARGET}" --output="${GITHUB_WORKSPACE}/${INPUTS_OUTPUT}"
         else
           echo "::error::invalid linter ${INPUTS_LINTER}; choose one of ${linters[*]}"
