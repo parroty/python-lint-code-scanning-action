@@ -62,10 +62,18 @@ def flake8_linter(target: Path) -> None:
         LOG.error("No output from flake8")
         return None
 
-    # process STDOUT
-    sarif = json.loads(process.stdout.decode("utf-8"))
+    try:
+        sarif = json.loads(process.stdout.decode("utf-8"))
+    except json.JSONDecodeError as err:
+        LOG.error("Unable to parse flake8 output: %s", err)
+        LOG.debug("Output: %s", process.stdout.decode("utf-8"))
+        return None
 
-    return sarif["runs"][0]
+    if "runs" in sarif and len(sarif["runs"]) > 0:
+        return sarif["runs"][0]
+    else:
+        LOG.error("SARIF not correctly formed, or no runs to output")
+        return None
 
 
 def ruff_format_sarif(results: List[Dict[str, Any]], target: Path) -> dict:
@@ -154,8 +162,12 @@ def ruff_linter(target: Path) -> Optional[dict]:
         LOG.error("No output from ruff")
         return None
 
-    # process STDOUT
-    results = json.loads(process.stdout.decode("utf-8"))
+    try:
+        sarif = json.loads(process.stdout.decode("utf-8"))
+    except json.JSONDecodeError as err:
+        LOG.error("Unable to parse ruff output: %s", err)
+        LOG.debug("Output: %s", process.stdout.decode("utf-8"))
+        return None
 
     # format the ruff JSON into SARIF
     sarif_run = ruff_format_sarif(results, target)
@@ -233,8 +245,12 @@ def pylint_linter(target: Path) -> Optional[dict]:
         LOG.error("No output from pylint")
         return None
 
-    # process STDOUT
-    results = json.loads(process.stdout.decode("utf-8"))
+    try:
+        sarif = json.loads(process.stdout.decode("utf-8"))
+    except json.JSONDecodeError as err:
+        LOG.error("Unable to parse pylint output: %s", err)
+        LOG.debug("Output: %s", process.stdout.decode("utf-8"))
+        return None
 
     # format the pylint JSON into SARIF
     sarif_run = pylint_format_sarif(results, target)
@@ -411,8 +427,12 @@ def pyright_linter(target: Path) -> Optional[dict]:
         LOG.error("No output from pyright")
         return None
 
-    # process STDOUT
-    results = json.loads(process.stdout.decode("utf-8"))
+    try:
+        sarif = json.loads(process.stdout.decode("utf-8"))
+    except json.JSONDecodeError as err:
+        LOG.error("Unable to parse pyright output: %s", err)
+        LOG.debug("Output: %s", process.stdout.decode("utf-8"))
+        return None
 
     # format the pyright JSON into SARIF
     sarif_run = pyright_format_sarif(results, target)
