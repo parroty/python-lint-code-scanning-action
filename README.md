@@ -12,14 +12,15 @@ This Action and Python script lets you run one of several Python linters and typ
 - [Pylint](https://www.pylint.org/)
 - [Ruff](https://beta.ruff.rs/)
 - [Mypy](https://mypy.readthedocs.io/en/stable/)
-- [Pytype](https://github.com/google/pytype/) - for Python 3.10 and below only
+- [Pytype](https://github.com/google/pytype/) - for Python 3.10 and below
 - [Pyright](https://github.com/microsoft/pyright)
-- [Fixit 2](https://fixit.readthedocs.io/en/stable/)
+- [Fixit 2](https://fixit.readthedocs.io/en/stable/) - for Python 3.8 and above
 
 ## Requirements
 
 - Python 3.7 or higher
 - For Pytype, Python 3.10 or lower
+- For Fixit, Python 3.8 or higher
 - GitHub Actions
 
 ## Usage
