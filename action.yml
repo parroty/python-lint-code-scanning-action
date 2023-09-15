@@ -54,6 +54,7 @@ runs:
         INPUTS_LINTER: ${{ inputs.linter }}
         INPUTS_TARGET: ${{ inputs.target }}
         INPUTS_OUTPUT: ${{ inputs.output }}
+        INPUTS_PYTHON_VERSION: ${{ inputs.python-version }}
       shell: bash
     - name: Upload SARIF
       if: ${{ hashFiles(inputs.output) != '' }}
