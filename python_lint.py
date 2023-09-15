@@ -617,8 +617,12 @@ def main() -> None:
 
         sarif_run = LINTERS[linter](Path(args.target).absolute())
 
-        if sarif_run is not None:
+        if sarif_run is not None and len(sarif_run["results"]) > 0:
             sarif_runs.append(sarif_run)
+
+    if len(sarif_runs) == 0:
+        LOG.info("No SARIF runs with results to output")
+        sys.exit(0)
 
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
