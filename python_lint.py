@@ -163,7 +163,7 @@ def ruff_linter(target: Path) -> Optional[dict]:
         return None
 
     try:
-        sarif = json.loads(process.stdout.decode("utf-8"))
+        results = json.loads(process.stdout.decode("utf-8"))
     except json.JSONDecodeError as err:
         LOG.error("Unable to parse ruff output: %s", err)
         LOG.debug("Output: %s", process.stdout.decode("utf-8"))
@@ -246,7 +246,7 @@ def pylint_linter(target: Path) -> Optional[dict]:
         return None
 
     try:
-        sarif = json.loads(process.stdout.decode("utf-8"))
+        results = json.loads(process.stdout.decode("utf-8"))
     except json.JSONDecodeError as err:
         LOG.error("Unable to parse pylint output: %s", err)
         LOG.debug("Output: %s", process.stdout.decode("utf-8"))
@@ -428,7 +428,7 @@ def pyright_linter(target: Path) -> Optional[dict]:
         return None
 
     try:
-        sarif = json.loads(process.stdout.decode("utf-8"))
+        results = json.loads(process.stdout.decode("utf-8"))
     except json.JSONDecodeError as err:
         LOG.error("Unable to parse pyright output: %s", err)
         LOG.debug("Output: %s", process.stdout.decode("utf-8"))
