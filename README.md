@@ -105,7 +105,7 @@ Example `pyproject.toml` and `.flake8` files for linting this repository are inc
 
 ### Why not use the existing Python linting Actions?
 
-They don't all produce SARIF, and they don't upload to Code Scanning
+They don't all produce SARIF, and they don't upload to Code Scanning.
 
 ### Why not create N different Actions?
 
@@ -120,3 +120,23 @@ It's possible that a future release might allow you to specify some very common 
 ### Why not add SARIF output directly to the linters, and then call them?
 
 Good idea. That's something to consider for the future. For now it was quicker and easier to call the linters and process their output into SARIF, vs raising PRs against each linter.
+
+### You really should provide some sensible defaults for the linters
+
+Wow, so opinionated! We decided not to be opinionated 😁. Linting is very individual, and deciding on defaults beyond those of the tools themselves could prove to be a thankless task. Hopefully if you want to use these linters then you'll be able to configure them to your liking.
+
+### What about tool X?
+
+Lots of linters are wrapped up or replicated by these linters.
+
+`pydocstyle` can be run using a plugin to Flake8, and `mccabe` is included in Flake8.
+
+If there's one you really need that isn't runnable, please raise an issue or a PR to include it.
+
+### Why can't I run all of the linters in one go?
+
+Actions lets you do a matrix job, which does great work in parallelising things.
+
+We could use Python multi-processing to run them all in parallel, but that doesn't make such sense on standard GitHub runners.
+
+If you want to run them all at once you can call the underlying script with multiple linters, but that feature is really just to make testing easier, since they run in series.
