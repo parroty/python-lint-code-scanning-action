@@ -20,7 +20,7 @@ jobs:
       - name: Install pip dependencies
         run: python3 -mpip install flake8 pylint ruff mypy pytype pyright fixit
       - name: Run Python Lint
-        uses: aegilops/python-lint-code-scanning-action@v0.0.1
+        uses: aegilops/python-lint-code-scanning-action@25c9050e9c18aeccf3e75236ab479f4222157f21
         with:
           linter: ${{ matrix.linter }}
           python-version: ${{ matrix.python-version }}
